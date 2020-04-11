@@ -1,18 +1,16 @@
 readRawdata <- function(path){
   hd <- getwd()
-  output_fn <- strsplit(path,split="//")[[1]][length(strsplit(path,split="//")[[1]])]
   setwd(path)
-  foldernames <- list.files(pattern = "[[:digit:]]{6}")
-  FN <- paste(path,"/",foldernames,sep="")
+  FN <- list.files(pattern = "[[:digit:]]{6}")
   n_folder <- length(FN)
   PRIMARY_DATA <- list()
 
   for(i in 1:n_folder){
     setwd(FN[i])
     n_c14res <- length(dir(pattern="c14res"))
-    fn <- paste(sprintf("%01d",1:n),".c14res",sep="")
+    fn <- paste(sprintf("%01d",seq(n_c14res)),".c14res",sep="")
     CONDITION <- list()
-    SAMPLE_NAME <- rep(NA,n)
+    SAMPLE_NAME <- rep(NA,n_c14res)
     RESULTS <- data.frame(matrix(rep(NA,18), nrow=1))[numeric(0), ]
     BLOCK_DATA <- list()
     MASTER_SPECTRUM <- list()
@@ -86,7 +84,10 @@ readRawdata <- function(path){
     primary_data_temp <- list(CONDITION=CONDITION,RESULTS=RESULTS,BLOCK_DATA=BLOCK_DATA,MASTER_SPECTRUM=MASTER_SPECTRUM)
 
     PRIMARY_DATA <- c(PRIMARY_DATA,list(primary_data_temp))
+    setwd("../")
   }
+
+  output_fn <- strsplit(path,split="/")[[1]][length(strsplit(path,split="/")[[1]])]
   property <- list(rawfolder_name = output_fn, rawpath = path, read_date = Sys.Date())
   PRIMARY_DATA <- c(list(property),PRIMARY_DATA)
   names(PRIMARY_DATA) <- c("property",foldernames)
