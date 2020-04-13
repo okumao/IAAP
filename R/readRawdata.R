@@ -9,24 +9,15 @@ readRawdata <- function(path, index_path = NULL){
     setwd(FN[i])
     n_c14res <- length(dir(pattern="c14res"))
     fn <- paste(sprintf("%01d",seq(n_c14res)),".c14res",sep="")
-    CONDITION <- list()
+    CONDITION <- BLOCK_DATA <- list()
     SAMPLE_NAME <- rep(NA,n_c14res)
-    RESULTS <- data.frame(matrix(rep(NA,18), nrow=1))[numeric(0), ]
-    BLOCK_DATA <- list()
+    RESULTS <- data.frame(t(1:18))[0, ]
     MASTER_SPECTRUM <- 0:2047
 
     for(j in 1:n_c14res){
       ##############################read CONDITION##############################
-      date_temp <- paste(read.table(fn[j], skip = 1, nrows = 1)[5][[1]])
-      if(nchar(date_temp)==9) date_temp <- paste(0,date_temp,sep="")
-      md <- as.Date(date_temp,format="%m/%d/%y")
-      mt <- paste(read.table(fn[[j]], skip = 1, nrows = 1)[6][[1]])
-      Measuring_date_time <- as.POSIXct(paste(md,mt))
-      if(paste(read.table(fn[j], skip = 1, nrows = 1)[7][[1]])=="PM"){
-        Measuring_date_time <- Measuring_date_time + 12*60*60
-      }
       condition_temp <- list(
-        Measuring_date_time = Measuring_date_time,
+        Measuring_date_time = paste(read.table(fn[j], skip = 1, nrows = 1, colClasses = rep("character", 7))[5:7]),
         Files = paste(read.table(fn[j], skip = 2, nrows = 1)[[3]]),
         Sample_name = paste(read.table(fn[j], skip = 3, nrows = 1)[[4]]),
         Sample_position = read.table(fn[j], skip = 4, nrows = 1)[[4]],
@@ -76,25 +67,17 @@ readRawdata <- function(path, index_path = NULL){
       MASTER_SPECTRUM <- data.frame(MASTER_SPECTRUM, master_spectrum_temp)
     }
 
-    names(CONDITION) <- SAMPLE_NAME
-    rownames(RESULTS) <- SAMPLE_NAME
-    names(BLOCK_DATA) <- SAMPLE_NAME
-    spec_sum <- apply(MASTER_SPECTRUM[,-1], 1, sum)
-    MASTER_SPECTRUM <- data.frame(MASTER_SPECTRUM[1], sum = spec_sum, MASTER_SPECTRUM[2:length(MASTER_SPECTRUM)])
+    names(CONDITION) <- rownames(RESULTS) <- names(BLOCK_DATA) <- SAMPLE_NAME
+    MASTER_SPECTRUM <- data.frame(MASTER_SPECTRUM[1], sum = apply(MASTER_SPECTRUM[,-1], 1, sum), MASTER_SPECTRUM[-1])
     names(MASTER_SPECTRUM) <- c("smp_point", "sum", SAMPLE_NAME)
     primary_data_temp <- list(CONDITION=CONDITION,RESULTS=RESULTS,BLOCK_DATA=BLOCK_DATA,MASTER_SPECTRUM=MASTER_SPECTRUM)
-
     PRIMARY_DATA <- c(PRIMARY_DATA,list(primary_data_temp))
     setwd("../")
   }
 
-  output_fn <- strsplit(path,split="/")[[1]][length(strsplit(path,split="/")[[1]])]
-  if(is.null(index_path)){
-    index <- read.csv("index.csv")
-  }else{
-    index <- read.csv(index_path)
-  }
-  property <- list(rawfolder_name = output_fn, rawpath = path, read_date = Sys.Date(), run_num = n_folder, index = index)
+  if(is.null(index_path)) index_path <- "index.csv"
+  index <- read.csv(index_path)
+  property <- list(rawfolder_path = path, read_date = Sys.Date(), run_num = n_folder, index = index)
   PRIMARY_DATA <- c(list(property),PRIMARY_DATA)
   names(PRIMARY_DATA) <- c("property",FN)
   setwd(hd)
