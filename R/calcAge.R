@@ -82,6 +82,17 @@
   return(list(Basic_information = Basic_information, data = y))
 }
 
+
+
+
+
+#' Calculate 14C age
+#'
+#' \code{calcAge} returns a list which includes 14C age and other values used for calculation
+#'
+#' @param logdata A list generated with \code{readRawdata}.
+#' @param edit_C14window A logical scalar. If TRUE, the editor is displayed and the C14 window can be edited.
+
 calcAge <- function(logdata, edit_C14window = FALSE){
   log_summary <- .summaryLog(logdata, edit_C14window)
   detail <- list()
