@@ -51,7 +51,7 @@
   f_e <- signif(sqrt(((Rsn_bc/Aon^2) * dAon)^2 + (dRsn_bc/Aon)^2))
 
   #14C age
-  t <- signif(-8033 * log(Rsn_bc/Aon))
+  t <- signif(-8033 * suppressWarnings(log(Rsn_bc/Aon)))
   dt <- signif(8033 * sqrt((dAon/Aon)^2 + (dRsn_bc/Rsn_bc)^2))
 
   #no background correction 14C age
@@ -85,26 +85,30 @@
 calcAge <- function(logdata, edit_C14window = FALSE){
   log_summary <- .summaryLog(logdata, edit_C14window)
   detail <- list()
-  age_table <- rep(NA,nrow(log_summary[[1]]))
-  weight <- rep(NA,nrow(log_summary[[1]]))
-
+  age_table <- age_weight <- nbc_table <- nbc_weight <- rep(NA,nrow(log_summary[[1]]))
 
   for(i in 1:(length(logdata)-1)){
     temp <- .calc(logdata, log_summary[[i]])
     detail <- c(detail,list(temp))
-    age_table <- cbind(age_table,temp$data$age)
-    w <- 1/temp$data$age_1sd^2
-    weight <- cbind(weight,w)
+    age_table <- cbind(age_table, temp$data$age)
+    age_weight <- cbind(age_weight, 1/temp$data$age_1sd^2)
+    nbc_table <- cbind(nbc_table, temp$data$no_bg_corr_age)
+    nbc_weight <- cbind(nbc_weight, 1/temp$data$no_bg_corr_age_1sd^2)
   }
 
   age_table <- age_table[,-1]
-  weight <- weight[,-1]
+  age_weight <- age_weight[,-1]
+  nbc_table <- nbc_table[,-1]
+  nbc_weight <- nbc_weight[,-1]
 
-  age <- round(apply(age_table*weight,1,sum)/apply(weight,1,sum))
-  sd1 <- round(sqrt(1/apply(weight,1,sum)))
+  age <- round(apply(age_table*age_weight,1,sum)/apply(age_weight,1,sum))
+  age_sd1 <- round(sqrt(1/apply(age_weight,1,sum)))
+  nbc <- round(apply(nbc_table*nbc_weight,1,sum)/apply(nbc_weight,1,sum))
+  nbc_sd1 <- round(sqrt(1/apply(nbc_weight,1,sum)))
 
   names(detail) <- names(logdata[-1])
-  z <- data.frame(sample_type = logdata$property$index$type, age, age_error = sd1)
+  z <- data.frame(sample_type = logdata$property$index$type, age, age_error = age_sd1,
+                  no_bg_corr_age = nbc, no_bg_corr_age_error = nbc_sd1)
   rownames(z) <- rownames(log_summary[[1]])
   return(list(summary = z, values_for_calc = log_summary, detail = detail))
 }
