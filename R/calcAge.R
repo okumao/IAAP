@@ -1,29 +1,23 @@
-.summaryLog <- function(logdata, edit_C14window = FALSE){
-  log_summary <- list()
-  C14window <- data.frame(t(1:2))[0, ]
-  for(i in seq(logdata[[1]]$run_num)){
-    C14window <- rbind(C14window,logdata[[i+1]]$CONDITION[[1]]$C14_window)
-  }
-  rownames(C14window) <- names(logdata[-1])
+.editWindow <- function(logdata, edit_C14window = FALSE){
+  C14window <- do.call(rbind, lapply(logdata[-1], function(x) x$CONDITION[[1]]$C14_window))
   colnames(C14window) <- c("14C window lower limit", "14C window upper limit")
-  if(edit_C14window==TRUE){
-    C14window <- edit(C14window)
-  }
+  if(edit_C14window) C14window <- edit(C14window)
+  log_summary <- list()
   for(i in seq(logdata[[1]]$run_num)){
-    n <- apply(logdata[[i+1]]$MASTER_SPECTRUM[-2:-1][(C14window[i,1]+1):C14window[i,2],],2,sum) + 1
+    n <- apply(logdata[[i+1]]$MASTER_SPECTRUM[(C14window[i,1]+1):C14window[i,2],],2,sum) + 1
     Rs <- signif(5.34059e-21 *
-                   (n/(logdata[[i+1]]$RESULTS$C12_average_current * logdata[[i+1]]$RESULTS$Measurement_time)))
+        (n/(logdata[[i+1]]$RESULTS$`C12 average current` * logdata[[i+1]]$RESULTS$`Measurement time`)))
     R13 <- signif(0.01111111 *
-                    logdata[[i+1]]$RESULTS$C13_average_current/logdata[[i+1]]$RESULTS$C12_average_current)
-    temp <- data.frame(Rs = Rs, n = n, R13 = R13)
-    log_summary[[i]] <- temp
+          logdata[[i+1]]$RESULTS$`C13 average current` /logdata[[i+1]]$RESULTS$`C12 average current`)
+    log_summary[[i]] <- data.frame(Rs = Rs, n = n, R13 = R13)
   }
   names(log_summary) <- names(logdata[-1])
   return(log_summary)
 }
 
+
 .calc <- function(logdata, x){
-  type <- logdata$property$index$type
+  type <- toupper(logdata$property$index$type)
 
   ###14C age calculation###
 
@@ -31,7 +25,7 @@
   dRs <- signif(x$Rs/sqrt(x$n))
 
   #isotope fractionation correction
-  R13HOx2 <- signif(mean(x$R13[type=="HOx2"]))
+  R13HOx2 <- signif(mean(x$R13[type=="HOX2"]))
   rPDB <- signif(R13HOx2/(-17.8/1000+1))
   d13C <- signif(1000 * (x$R13/rPDB-1))
   Rsn <- signif(x$Rs * ((1-25/1000)/(1+d13C/1000))^2)
@@ -44,8 +38,8 @@
   dRsn_bc <- signif(sqrt(dRsn^2 + dRbgn^2))
 
   #Aon
-  Aon <- signif(0.7459 * mean(Rsn_bc[type=="HOx2"]))
-  dAon <- signif(0.7459 * sd(Rsn_bc[type=="HOx2"]))
+  Aon <- signif(0.7459 * mean(Rsn_bc[type=="HOX2"]))
+  dAon <- signif(0.7459 * sd(Rsn_bc[type=="HOX2"]))
 
   f <- signif(Rsn_bc/Aon)
   f_e <- signif(sqrt(((Rsn_bc/Aon^2) * dAon)^2 + (dRsn_bc/Aon)^2))
@@ -93,8 +87,8 @@
 #' @param logdata A list generated with \code{readRawdata}.
 #' @param edit_C14window A logical scalar. If TRUE, the editor is displayed and the C14 window can be edited.
 
-calcAge <- function(logdata, edit_C14window = FALSE){
-  log_summary <- .summaryLog(logdata, edit_C14window)
+calcAge1 <- function(logdata, edit_C14window = FALSE){
+  log_summary <- .editWindow(logdata, edit_C14window)
   detail <- list()
   age_table <- age_weight <- nbc_table <- nbc_weight <- rep(NA,nrow(log_summary[[1]]))
 

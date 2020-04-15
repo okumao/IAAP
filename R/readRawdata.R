@@ -1,85 +1,45 @@
-readRawdata <- function(path, index_path = NULL){
+readRawdata1 <- function(path, index_path = NULL){
   hd <- getwd()
   setwd(path)
-  FN <- list.files(pattern = "[[:digit:]]{6}")
-  n_folder <- length(FN)
-  PRIMARY_DATA <- list()
-
-  for(i in 1:n_folder){
-    setwd(FN[i])
-    n_c14res <- length(dir(pattern="c14res"))
-    fn <- paste(sprintf("%01d",seq(n_c14res)),".c14res",sep="")
-    CONDITION <- BLOCK_DATA <- list()
-    SAMPLE_NAME <- rep(NA,n_c14res)
-    RESULTS <- data.frame(t(1:18))[0, ]
-    MASTER_SPECTRUM <- 0:2047
-
-    for(j in 1:n_c14res){
-      ##############################read CONDITION##############################
-      condition_temp <- list(
-        Measuring_date_time = paste(read.table(fn[j], skip = 1, nrows = 1, colClasses = rep("character", 7))[5:7]),
-        Files = paste(read.table(fn[j], skip = 2, nrows = 1)[[3]]),
-        Sample_name = paste(read.table(fn[j], skip = 3, nrows = 1)[[4]]),
-        Sample_position = read.table(fn[j], skip = 4, nrows = 1)[[4]],
-        Sample_description = paste(read.table(fn[j], skip = 5, nrows = 1)[[4]]),
-        Operator = paste(read.table(fn[j], skip = 6, nrows = 1)[[3]]),
-        Sample_Moving = paste(read.table(fn[j], skip = 7, nrows = 1)[[4]]),
-        C14_window = as.numeric(read.table(fn[j], skip = 8, nrows = 1)[c(4,6)]),
-        C13parC12_window = as.numeric(read.table(fn[j], skip = 9, nrows = 1)[c(6,8)]),
-        Stop_condition_blocks = read.table(fn[j], skip = 10, nrows = 1)[[4]],
-        Blocks_in_file = read.table(fn[j], skip = 11, nrows = 1)[[5]],
-        Chopper_Correction = read.table(fn[j], skip = 12, nrows = 1)[[4]],
-        Block_time = read.table(fn[j], skip = 13, nrows = 1)[[4]],
-        Charge_State = read.table(fn[j], skip = 14, nrows = 1)[[4]]
+  folname <- list.files(pattern = "[[:digit:]]{6}")
+  FN <- paste(path, "/", folname, sep = "")
+  temp <- lapply(FN, function(FN){
+    setwd(FN)
+    fn <- paste(sprintf("%01d",seq(length(dir(pattern="c14res")))),".c14res",sep="")
+    con <- lapply(fn, function(fn){
+      list(
+        Measuring_date_time = paste(read.table(fn, skip = 1, nrows = 1, colClasses = rep("character", 7))[5:7]),
+        Files = paste(read.table(fn, skip = 2, nrows = 1)[[3]]),
+        Sample_name = paste(read.table(fn, skip = 3, nrows = 1)[[4]]),
+        Sample_position = read.table(fn, skip = 4, nrows = 1)[[4]],
+        Sample_description = paste(read.table(fn, skip = 5, nrows = 1)[[4]]),
+        Operator = paste(read.table(fn, skip = 6, nrows = 1)[[3]]),
+        Sample_Moving = paste(read.table(fn, skip = 7, nrows = 1)[[4]]),
+        C14_window = as.numeric(read.table(fn, skip = 8, nrows = 1)[c(4,6)]),
+        C13parC12_window = as.numeric(read.table(fn, skip = 9, nrows = 1)[c(6,8)]),
+        Stop_condition_blocks = read.table(fn, skip = 10, nrows = 1)[[4]],
+        Blocks_in_file = read.table(fn, skip = 11, nrows = 1)[[5]],
+        Chopper_Correction = read.table(fn, skip = 12, nrows = 1)[[4]],
+        Block_time = read.table(fn, skip = 13, nrows = 1)[[4]],
+        Charge_State = read.table(fn, skip = 14, nrows = 1)[[4]]
       )
-      CONDITION <- c(CONDITION,list(condition_temp))
-      SAMPLE_NAME[j] <- condition_temp$Sample_name
-
-      ##############################read RESULTS##############################
-      results_temp <- data.frame(
-        Measurement_time = read.table(fn[j], skip = 16, nrows = 1)[[4]],
-        Run_time = read.table(fn[j], skip = 17, nrows = 1)[[4]],
-        Initial_Target_Current_mA = read.table(fn[j], skip = 18, nrows = 1)[[6]],
-        Final_Target_Current_mA = read.table(fn[j], skip = 19, nrows = 1)[[6]],
-        C14_counts = read.table(fn[j], skip = 20, nrows = 1)[[4]],
-        Detector_counts = read.table(fn[j], skip = 21, nrows = 1)[[4]],
-        C14_counts_par_sec = read.table(fn[j], skip = 22, nrows = 1)[[4]],
-        C14_statistical_error_parcent = read.table(fn[j], skip = 23, nrows = 1)[[6]],
-        C13_average_current = read.table(fn[j], skip = 24, nrows = 1)[[5]],
-        C13_rel_standard_deviation = read.table(fn[j], skip = 25, nrows = 1)[[6]],
-        C12_average_current = read.table(fn[j], skip = 26, nrows = 1)[[5]],
-        C12_rel_standard_deviation = read.table(fn[j], skip = 27, nrows = 1)[[6]],
-        C14_par_C13_ratio = read.table(fn[j], skip = 28, nrows = 1)[[6]],
-        C14_par_C12_ratio = read.table(fn[j], skip = 29, nrows = 1)[[6]],
-        C13_par_C12_ratio = read.table(fn[j], skip = 30, nrows = 1)[[6]],
-        C14_par_C13_rel_std_deviation = read.table(fn[j], skip = 31, nrows = 1)[[8]],
-        C14_par_C12_rel_std_deviation = read.table(fn[j], skip = 32, nrows = 1)[[8]],
-        C13_par_C12_rel_std_deviation = read.table(fn[j], skip = 33, nrows = 1)[[8]]
-      )
-      RESULTS <- rbind(RESULTS,results_temp)
-
-      ##############################read BLOCK DATA##############################
-      block_data_temp <- read.table(fn[j], skip = 35, header = TRUE, nrows = condition_temp$Blocks_in_file)
-      BLOCK_DATA <- c(BLOCK_DATA,list(block_data_temp))
-
-      ##############################read MASTER SPECTRUM##############################
-      master_spectrum_temp <- as.vector(read.table(fn[j], sep = "\n", skip = 37+ condition_temp$Blocks_in_file, header = FALSE, row.names=NULL)[,1])
-      MASTER_SPECTRUM <- data.frame(MASTER_SPECTRUM, master_spectrum_temp)
-    }
-
-    names(CONDITION) <- rownames(RESULTS) <- names(BLOCK_DATA) <- SAMPLE_NAME
-    MASTER_SPECTRUM <- data.frame(MASTER_SPECTRUM[1], sum = apply(MASTER_SPECTRUM[,-1], 1, sum), MASTER_SPECTRUM[-1])
-    names(MASTER_SPECTRUM) <- c("smp_point", "sum", SAMPLE_NAME)
-    primary_data_temp <- list(CONDITION=CONDITION,RESULTS=RESULTS,BLOCK_DATA=BLOCK_DATA,MASTER_SPECTRUM=MASTER_SPECTRUM)
-    PRIMARY_DATA <- c(PRIMARY_DATA,list(primary_data_temp))
-    setwd("../")
-  }
-
+    })
+    res <- as.data.frame(t(do.call(cbind, lapply(fn, function(x) read.table(x, skip = 16, nrows = 18, sep = ":", row.names = 1)))))
+    bd <- lapply(fn, function(fn)read.table(fn, skip = 35, header = TRUE, nrows = con[[1]]$Blocks_in_file))
+    ms <-  do.call(data.frame, lapply(fn, function(fn){
+      as.vector(read.table(fn, sep = "\n", skip = 37+ con[[1]]$Blocks_in_file, header = FALSE, row.names=NULL)[,1])
+    }))
+    smp_name <- unlist(con)[grep("Sample_name", names(unlist(con)))]
+    colnames(res) <- sub(" {2,}", "", names(res))
+    names(con) <- rownames(res) <- names(bd) <- names(ms) <- smp_name
+    list(CONDITION = con, RESULTS = res, BLOCK_DATA = bd, MASTER_SPECTRUM = ms)
+  })
   if(is.null(index_path)) index_path <- "index.csv"
-  index <- read.csv(index_path)
-  property <- list(rawfolder_path = path, read_date = Sys.Date(), run_num = n_folder, index = index)
-  PRIMARY_DATA <- c(list(property),PRIMARY_DATA)
-  names(PRIMARY_DATA) <- c("property",FN)
+  index <- read.csv(paste(path, "/", index_path, sep = ""))
+  temp <- c(list(list(rawfolder_path = path, read_date = Sys.Date(), run_num = length(temp), index = index)), temp)
+  names(temp) <- c("property", folname)
   setwd(hd)
-  return(PRIMARY_DATA)
+  return(temp)
 }
+
+
